@@ -12,9 +12,6 @@
     padding: 30px;
     background-color: #f7f7f7;
   }
-  h2 {
-    margin-bottom: 10px;
-  }
   button {
     width: 90%;
     max-width: 320px;
@@ -27,32 +24,24 @@
     background-color: #2c7be5;
     color: white;
   }
-  button:active {
-    background-color: #1a5fc1;
-  }
 </style>
 </head>
 
 <body>
 
 <h2>REGISTRO DE ASISTENCIA</h2>
-<p>Solo ingreso – Máximo 2 veces por día</p>
+<p>Ingreso (ubicación solo informativa)</p>
 
-<!-- ===== BOTONES (CAMBIAR NOMBRES SI ES NECESARIO) ===== -->
-<button onclick="registrar('Rafael')">Rafael</button>
-<button onclick="registrar('Ysaac')">Ysaac</button>
-<!-- ===================================================== -->
+<button onclick="registrar('Juan Perez')">Juan Perez</button>
+<button onclick="registrar('Maria Lopez')">Maria Lopez</button>
 
 <script>
-// ================= CONFIGURACIÓN =================
-const LAT_REF = -10.687371;      // COORDENADA REAL DE LA OFICINA
+// ============ CONFIGURACION ============
+const LAT_REF = -10.687371;
 const LON_REF = -76.245331;
-const RADIO_MAX = 300;           // Radio permitido (metros)
-const MAX_ACCURACY = 100;        // Precisión GPS máxima aceptada
 const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbwC0IiPUseEh5hPthAcqY0BA5oE1TUksUbG6xX18ZuS_YpJhCGMUtf2jQnazLlxYzNH0Q/exec";
-// ================================================
+// ======================================
 
-// CALCULO DE DISTANCIA (HAVERSINE)
 function distancia(lat1, lon1, lat2, lon2) {
   const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -67,11 +56,6 @@ function distancia(lat1, lon1, lat2, lon2) {
 
 function registrar(nombre) {
 
-  if (!navigator.geolocation) {
-    alert("Este dispositivo no soporta GPS");
-    return;
-  }
-
   navigator.geolocation.getCurrentPosition(
     pos => {
 
@@ -79,36 +63,17 @@ function registrar(nombre) {
       const lon = pos.coords.longitude;
       const accuracy = pos.coords.accuracy;
 
-      // VALIDAR PRECISIÓN GPS
-      if (accuracy > MAX_ACCURACY) {
-        alert(
-          "Ubicación imprecisa (" + Math.round(accuracy) + " m).\n" +
-          "Active GPS en alta precisión y espere unos segundos."
-        );
-        return;
-      }
-
-      // CALCULAR DISTANCIA
       const dist = distancia(lat, lon, LAT_REF, LON_REF);
-
-      if (dist > RADIO_MAX) {
-        alert(
-          "Fuera de rango.\n" +
-          "Distancia: " + Math.round(dist) + " m"
-        );
-        return;
-      }
-
       const ahora = new Date();
 
-      // ENVIAR A GOOGLE SHEETS
       fetch(URL_SCRIPT, {
         method: "POST",
         body: JSON.stringify({
           nombre: nombre,
           fecha: ahora.toISOString().slice(0, 10),
           hora: ahora.toLocaleTimeString(),
-          distancia: dist.toFixed(2)
+          distancia: dist.toFixed(2),
+          precision: accuracy.toFixed(2)
         })
       })
       .then(res => res.text())
@@ -118,16 +83,17 @@ function registrar(nombre) {
         } else if (respuesta === "LIMITE_DIARIO") {
           alert("Ya registró las 2 asistencias del día");
         } else {
-          alert("Asistencia registrada correctamente");
+          alert(
+            "Asistencia registrada\n" +
+            "Distancia: " + Math.round(dist) + " m\n" +
+            "Precisión GPS: " + Math.round(accuracy) + " m"
+          );
         }
-      })
-      .catch(() => {
-        alert("Error al registrar. Verifique conexión.");
       });
 
     },
     () => {
-      alert("Debe permitir el acceso a la ubicación");
+      alert("Debe permitir acceso a ubicación");
     },
     {
       enableHighAccuracy: true,
